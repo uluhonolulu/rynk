@@ -1,0 +1,35 @@
+/**
+ * Write your model definitions here
+ */
+
+namespace org.rynk
+
+participant User identified by userName {
+  o String userName
+}
+
+/** to avoid double voting, we store all voters */
+asset UserVote identified by userName {
+  o String userName
+}
+
+/* all items to be voted for, like, names of presidential candidates */
+asset Decision identified by name {
+  o String name
+}
+
+/* all vote results -- this is what we count at the end of the vote */
+asset VotedDecision identified by id {
+  o String id
+  --> Decision votedDecision
+}
+
+/* an act of voting */
+transaction Vote {
+  --> Decision votedDecision
+}
+
+/* A dummy input concept for CanVote() */
+concept CanVote {
+
+}
