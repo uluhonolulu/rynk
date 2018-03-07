@@ -29,7 +29,16 @@ transaction Vote {
   --> Decision votedDecision
 }
 
+/* checking whether we can vote */
+transaction CanVote {
+  o CanVoteInput input
+}
+
+event CanVoteResult {
+  o Boolean result
+}
+
 /* A dummy input concept for CanVote() */
-concept CanVote {
+concept CanVoteInput {
 
 }

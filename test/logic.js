@@ -9,6 +9,7 @@
 // const IdCard = require('composer-common').IdCard;
 // const MemoryCardStore = require('composer-common').MemoryCardStore;
 const { AdminConnection, BusinessNetworkConnection, BusinessNetworkDefinition, IdCard, MemoryCardStore } = require('./setup.js');
+const Util = require('composer-common').Util;
 
 const path = require('path');
 
@@ -80,6 +81,7 @@ describe('#' + namespace, async () => {
         // Connect to the business network using the network admin identity
         await businessNetworkConnection.connect(adminCardName);
 
+        factory = businessNetworkConnection.getBusinessNetwork().getFactory();
     });
 
     describe('Initially', async () => {
@@ -88,12 +90,35 @@ describe('#' + namespace, async () => {
         let votes = await voteRegistry.getAll();
         votes.length.should.equal(0);
       });
+
+      it('CanVote() returns true', async () => {
+        let transaction = factory.newTransaction(namespace, "CanVote");
+        let dummy = factory.newConcept(namespace, "CanVoteInput");
+        transaction.input = dummy;
+
+        let result = await waitForEvent();
+        result.should.be.true;
+
+        async function waitForEvent(){
+          return new Promise(async resolve => {
+            businessNetworkConnection.on('event',(event)=>{
+              var eventType = event.$namespace + '.' + event.$type;
+              if (eventType === "org.rynk.CanVoteResult") {
+                resolve(event.result);
+              }
+            });
+
+            await businessNetworkConnection.submitTransaction(transaction);
+          })
+        }
+        // result.should.be.true;
+
+      })
     });
 
     describe('Voting for the first time', async () => {
       let decision;
       before(async () => {
-        factory = businessNetworkConnection.getBusinessNetwork().getFactory();
         // Create a user participant
         const user = factory.newResource(namespace, 'User', 'Artem Smirnov');
         // Create a Decision
@@ -103,7 +128,6 @@ describe('#' + namespace, async () => {
 
       });
       beforeEach(async () => {
-        factory = businessNetworkConnection.getBusinessNetwork().getFactory();
 
         const voteData = factory.newTransaction(namespace, 'Vote');
         voteData.votedDecision = factory.newRelationship(namespace, 'Decision', decision.$identifier);
@@ -121,6 +145,10 @@ describe('#' + namespace, async () => {
         let votes = await voteRegistry.getAll();
         votes.length.should.equal(1);
         votes[0].votedDecision.$identifier.should.equal("Ulu Honolulu");
+      });
+
+      xit('shouldn\'t be able to vote again', async () => {
+
       });
     });
 
