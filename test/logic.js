@@ -18,6 +18,9 @@ require('chai').should();
 const namespace = 'org.rynk';
 const assetType = 'SampleAsset';
 
+const choiceName = "Dobro";
+
+
 describe('#' + namespace, async () => {
     // In-memory card store for testing so cards are not persisted to the file system
     const cardStore = new MemoryCardStore();
@@ -51,6 +54,8 @@ describe('#' + namespace, async () => {
 
         await adminConnection.importCard(deployerCardName, deployerCard);
         await adminConnection.connect(deployerCardName);
+        // let definition = await BusinessNetworkDefinition.fromDirectory(__dirname + '/..');
+        // await adminConnection.update(definition);
     });
 
     beforeEach(async () => {
@@ -82,11 +87,14 @@ describe('#' + namespace, async () => {
         await businessNetworkConnection.connect(adminCardName);
 
         factory = businessNetworkConnection.getBusinessNetwork().getFactory();
+
+        //create a Choice
+        await createChoice();
     });
 
     describe('Initially', async () => {
       it('should be zero votes', async () => {
-        let voteRegistry = await businessNetworkConnection.getAssetRegistry(namespace + '.' + 'VotedDecision');
+        let voteRegistry = await businessNetworkConnection.getAssetRegistry(namespace + '.' + 'VotedChoice');
         let votes = await voteRegistry.getAll();
         votes.length.should.equal(0);
       });
@@ -96,55 +104,79 @@ describe('#' + namespace, async () => {
         let dummy = factory.newConcept(namespace, "CanVoteInput");
         transaction.input = dummy;
 
-        let result = await waitForEvent();
+        let result = await getTransactionResult(transaction, "org.rynk.CanVoteResult");
         result.should.be.true;
+      });
 
-        async function waitForEvent(){
-          return new Promise(async resolve => {
-            businessNetworkConnection.on('event',(event)=>{
-              var eventType = event.$namespace + '.' + event.$type;
-              if (eventType === "org.rynk.CanVoteResult") {
-                resolve(event.result);
-              }
-            });
+      describe ('If there is a Choice', async () => {
+        // before(async () => {
+        // });
 
-            await businessNetworkConnection.submitTransaction(transaction);
-          })
-        }
-        // result.should.be.true;
-
-      })
+        it('it is present in vote results, and the vote count is 0', async () => {
+          let voteResults = await getVoteResults();
+          voteResults.length.should.equal(1);
+          let vote = voteResults[0];
+          vote.choiceName.should.equal(choiceName);
+          vote.count.should.equal(0);
+        });
+      });
     });
 
-    describe('Voting for the first time', async () => {
-      let decision;
-      before(async () => {
-        // Create a user participant
-        const user = factory.newResource(namespace, 'User', 'Artem Smirnov');
-        // Create a Decision
-        decision = factory.newResource(namespace, 'Decision', "Ulu Honolulu");
-        let decisionRegistry = await businessNetworkConnection.getAssetRegistry(namespace + '.' + 'Decision');
-        await decisionRegistry.add(decision);
+    async function getTransactionResult(transaction, expectedEvent){
+      return new Promise(async resolve => {
+        businessNetworkConnection.on('event',(event)=>{
+          var eventType = event.$namespace + '.' + event.$type;
+          if (eventType === expectedEvent) {
+            resolve(event.result);
+          }
+        });
 
+        await businessNetworkConnection.submitTransaction(transaction);
       });
-      beforeEach(async () => {
+    }
 
+    async function createChoice() {
+        let choice = factory.newResource(namespace, 'Choice', choiceName);
+        let registry = await businessNetworkConnection.getAssetRegistry(namespace + '.' + 'Choice');
+        await registry.add(choice);
+    }
+
+    async function getVoteResults() {
+      let transaction = factory.newTransaction(namespace, 'GetVoteResults');
+      let dummy = factory.newConcept(namespace, "CanVoteInput");
+      transaction.input = dummy;
+      let result = await getTransactionResult(transaction, "org.rynk.GetVoteResultsResult");
+      return result;
+    }
+
+    describe('Voting for the first time', async () => {
+
+      before(async () => {
+
+        //Vote transaction
         const voteData = factory.newTransaction(namespace, 'Vote');
-        voteData.votedDecision = factory.newRelationship(namespace, 'Decision', decision.$identifier);
+        voteData.votedChoice = factory.newRelationship(namespace, 'Choice', choiceName);
         await businessNetworkConnection.submitTransaction(voteData);
 
 
         // let vote = factory.newResource(namespace, 'SubmittedVote', "1");
-        // vote.submittedDecision = factory.newRelationship(namespace, 'Decision', decision.$identifier);
+        // vote.submittedChoice = factory.newRelationship(namespace, 'Choice', Choice.$identifier);
         // let voteRegistry = await businessNetworkConnection.getAssetRegistry(namespace + '.' + 'SubmittedVote');
         // await voteRegistry.add(vote);
       });
 
-      it('should be one vote for Our President', async () => {
-        let voteRegistry = await businessNetworkConnection.getAssetRegistry(namespace + '.' + 'VotedDecision');
+      it('should be one vote in the registry for Our President', async () => {
+        let voteRegistry = await businessNetworkConnection.getAssetRegistry(namespace + '.' + 'VotedChoice');
         let votes = await voteRegistry.getAll();
         votes.length.should.equal(1);
-        votes[0].votedDecision.$identifier.should.equal("Ulu Honolulu");
+        votes[0].votedChoice.$identifier.should.equal(choiceName);
+      });
+
+      it('should be one vote in the Vote Results for Our President', async () => {
+        let voteResults = await getVoteResults();
+        let vote = voteResults[0];
+        vote.choiceName.should.equal(choiceName);
+        vote.count.should.equal(1);
       });
 
       xit('shouldn\'t be able to vote again', async () => {

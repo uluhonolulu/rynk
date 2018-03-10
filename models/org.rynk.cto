@@ -9,24 +9,24 @@ participant User identified by userName {
 }
 
 /** to avoid double voting, we store all voters */
-asset UserVote identified by userName {
+asset Voter identified by userName {
   o String userName
 }
 
 /* all items to be voted for, like, names of presidential candidates */
-asset Decision identified by name {
+asset Choice identified by name {
   o String name
 }
 
 /* all vote results -- this is what we count at the end of the vote */
-asset VotedDecision identified by id {
+asset VotedChoice identified by id {
   o String id
-  --> Decision votedDecision
+  --> Choice votedChoice
 }
 
 /* an act of voting */
 transaction Vote {
-  --> Decision votedDecision
+  --> Choice votedChoice
 }
 
 /* checking whether we can vote */
@@ -41,4 +41,21 @@ event CanVoteResult {
 /* A dummy input concept for CanVote() */
 concept CanVoteInput {
 
+}
+
+transaction GetVoteResults {
+  o GetVoteResultsInput input
+}
+
+concept GetVoteResultsInput {
+
+}
+
+concept ChoiceAndVoteCount {
+  o String choiceName
+  o Integer count
+}
+
+event GetVoteResultsResult {
+  o ChoiceAndVoteCount[] result
 }
