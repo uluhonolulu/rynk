@@ -29,6 +29,7 @@ describe('#' + namespace, async () => {
     let factory;
 
     before( async() => {
+        //console.log("Global Before");
         // Embedded connection used for local testing
         const connectionProfile = {
             name: 'embedded',
@@ -56,9 +57,16 @@ describe('#' + namespace, async () => {
         await adminConnection.connect(deployerCardName);
         // let definition = await BusinessNetworkDefinition.fromDirectory(__dirname + '/..');
         // await adminConnection.update(definition);
+
+                //DEBUG
+                // var pouchdbDebug = require('pouchdb-debug');
+                // var PouchDB = require('pouchdb-core');
+                // PouchDB.plugin(pouchdbDebug);
+                // //PouchDB.debug.enable('*');
     });
 
     beforeEach(async () => {
+        //console.log("Global BeforeEach");
         businessNetworkConnection = new BusinessNetworkConnection({ cardStore: cardStore });
 
         const adminUserName = 'admin';
@@ -93,7 +101,7 @@ describe('#' + namespace, async () => {
     });
 
     describe('Initially', async () => {
-      it('should be zero votes', async () => {
+      xit('should be zero votes', async () => {
         let voteRegistry = await businessNetworkConnection.getAssetRegistry(namespace + '.' + 'VotedChoice');
         let votes = await voteRegistry.getAll();
         votes.length.should.equal(0);
@@ -123,11 +131,17 @@ describe('#' + namespace, async () => {
     });
 
     async function getTransactionResult(transaction, expectedEvent){
-      return new Promise(async resolve => {
+      return new Promise(async (resolve, reject) => {
         businessNetworkConnection.on('event',(event)=>{
           var eventType = event.$namespace + '.' + event.$type;
+          console.log(eventType);
           if (eventType === expectedEvent) {
-            resolve(event.result);
+            if (event.error) {
+              reject(event.error);
+            } else {
+              resolve(event.result);
+            }
+
           }
         });
 
@@ -139,6 +153,10 @@ describe('#' + namespace, async () => {
         let choice = factory.newResource(namespace, 'Choice', choiceName);
         let registry = await businessNetworkConnection.getAssetRegistry(namespace + '.' + 'Choice');
         await registry.add(choice);
+
+        // console.log("Counting choices");
+        // let choices = await registry.getAll();
+        // console.log(choices.length);
     }
 
     async function getVoteResults() {
@@ -151,13 +169,14 @@ describe('#' + namespace, async () => {
 
     describe('Voting for the first time', async () => {
 
-      before(async () => {
+      beforeEach(async () => {
+
 
         //Vote transaction
+        console.log("Voting..");
         const voteData = factory.newTransaction(namespace, 'Vote');
         voteData.votedChoice = factory.newRelationship(namespace, 'Choice', choiceName);
         await businessNetworkConnection.submitTransaction(voteData);
-
 
         // let vote = factory.newResource(namespace, 'SubmittedVote', "1");
         // vote.submittedChoice = factory.newRelationship(namespace, 'Choice', Choice.$identifier);
@@ -166,6 +185,7 @@ describe('#' + namespace, async () => {
       });
 
       it('should be one vote in the registry for Our President', async () => {
+        console.log("Counting..");
         let voteRegistry = await businessNetworkConnection.getAssetRegistry(namespace + '.' + 'VotedChoice');
         let votes = await voteRegistry.getAll();
         votes.length.should.equal(1);

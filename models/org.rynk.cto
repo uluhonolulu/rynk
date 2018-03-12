@@ -21,7 +21,7 @@ asset Choice identified by name {
 /* all vote results -- this is what we count at the end of the vote */
 asset VotedChoice identified by id {
   o String id
-  --> Choice votedChoice
+  --> Choice votedChoice optional
 }
 
 /* an act of voting */
@@ -58,4 +58,5 @@ concept ChoiceAndVoteCount {
 
 event GetVoteResultsResult {
   o ChoiceAndVoteCount[] result
+  o String error optional
 }
