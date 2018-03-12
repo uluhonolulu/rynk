@@ -101,7 +101,7 @@ describe('#' + namespace, async () => {
     });
 
     describe('Initially', async () => {
-      xit('should be zero votes', async () => {
+      it('should be zero votes', async () => {
         let voteRegistry = await businessNetworkConnection.getAssetRegistry(namespace + '.' + 'VotedChoice');
         let votes = await voteRegistry.getAll();
         votes.length.should.equal(0);
@@ -173,7 +173,7 @@ describe('#' + namespace, async () => {
 
 
         //Vote transaction
-        console.log("Voting..");
+        // console.log("Voting..");
         const voteData = factory.newTransaction(namespace, 'Vote');
         voteData.votedChoice = factory.newRelationship(namespace, 'Choice', choiceName);
         await businessNetworkConnection.submitTransaction(voteData);
@@ -185,7 +185,7 @@ describe('#' + namespace, async () => {
       });
 
       it('should be one vote in the registry for Our President', async () => {
-        console.log("Counting..");
+        // console.log("Counting..");
         let voteRegistry = await businessNetworkConnection.getAssetRegistry(namespace + '.' + 'VotedChoice');
         let votes = await voteRegistry.getAll();
         votes.length.should.equal(1);
@@ -199,8 +199,13 @@ describe('#' + namespace, async () => {
         vote.count.should.equal(1);
       });
 
-      xit('shouldn\'t be able to vote again', async () => {
+      it('shouldn\'t be able to vote again', async () => {
+        let transaction = factory.newTransaction(namespace, "CanVote");
+        let dummy = factory.newConcept(namespace, "CanVoteInput");
+        transaction.input = dummy;
 
+        let result = await getTransactionResult(transaction, "org.rynk.CanVoteResult");
+        result.should.be.false;
       });
     });
 
