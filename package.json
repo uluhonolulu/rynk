@@ -1,6 +1,6 @@
 {
   "name": "rynk",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "HL voting",
   "scripts": {
     "test": "mocha --recursive --timeout 20000"
