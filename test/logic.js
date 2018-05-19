@@ -1,17 +1,10 @@
 'use strict';
-/**
- * Write the unit tests for your transction processor functions here
- */
-
-// const AdminConnection = require('composer-admin').AdminConnection;
-// const BusinessNetworkConnection = require('composer-client').BusinessNetworkConnection;
-// const BusinessNetworkDefinition = require('composer-common').BusinessNetworkDefinition;
-// const IdCard = require('composer-common').IdCard;
-// const MemoryCardStore = require('composer-common').MemoryCardStore;
 const { AdminConnection, BusinessNetworkConnection, BusinessNetworkDefinition, IdCard, MemoryCardStore, CertificateUtil } = require('./setup.js');
 const Util = require('composer-common').Util;
 
 const path = require('path');
+
+const uuidv1 = require('uuid/v1');
 
 const chai = require('chai');
 const chaiAsPromised = require("chai-as-promised");
@@ -103,7 +96,7 @@ describe('#' + namespace, async () => {
         await createChoice();
     });
 
-    describe('Initially', async () => {
+    xdescribe('Initially', async () => {
       it('should be zero votes', async () => {
         let voteRegistry = await businessNetworkConnection.getAssetRegistry(namespace + '.' + 'VotedChoice');
         let votes = await voteRegistry.getAll();
@@ -116,7 +109,7 @@ describe('#' + namespace, async () => {
         let action = new Promise((resolve, reject) => {
             businessNetworkConnection.submitTransaction(transaction).then(resolve).catch(reject);
         });
-        action.should.be.fulfilled;
+        return action.should.be.fulfilled;
       });
     });
 
@@ -138,6 +131,7 @@ describe('#' + namespace, async () => {
         //Vote transaction
         const voteData = factory.newTransaction(namespace, 'Vote');
         voteData.votedChoice = factory.newRelationship(namespace, 'Choice', choiceName);
+        voteData.uuid = uuidv1();
         await businessNetworkConnection.submitTransaction(voteData);
       });
 
@@ -158,11 +152,21 @@ describe('#' + namespace, async () => {
       });
 
       it('shouldn\'t be able to vote again', async () => {
-        let transaction = factory.newTransaction(namespace, "CanVote");
-        let action = new Promise((resolve, reject) => {
-          businessNetworkConnection.submitTransaction(transaction).then(resolve).catch(reject);
-        });
-        action.should.not.be.fulfilled;     
+        let canVoteTransaction = factory.newTransaction(namespace, "CanVote");
+        
+        //Vote should throw, too
+        let voteTransaction = factory.newTransaction(namespace, 'Vote');
+        voteTransaction.votedChoice = factory.newRelationship(namespace, 'Choice', choiceName);
+        voteTransaction.uuid = uuidv1();
+
+        return Promise.all([
+          new Promise((resolve, reject) => {
+            businessNetworkConnection.submitTransaction(canVoteTransaction).then(resolve).catch(reject);
+          }).should.not.be.fulfilled,
+          new Promise((resolve, reject) => {
+            businessNetworkConnection.submitTransaction(voteTransaction).then(resolve).catch(reject);
+          }).should.not.be.fulfilled
+        ]);           
       });
     });
 

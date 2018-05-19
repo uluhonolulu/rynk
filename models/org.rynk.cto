@@ -34,6 +34,7 @@ asset VoteTotal identified by choiceName {
 
 /* an act of voting */
 transaction Vote {
+  o String uuid
   --> Choice votedChoice
 }
 
