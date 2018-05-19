@@ -73,7 +73,7 @@ describe('#' + namespace, async () => {
         const businessNetworkName = businessNetworkDefinition.getName();
             // Install the Composer runtime for the new business network
         await adminConnection.install(businessNetworkDefinition);
-        console.log("Installed " + businessNetworkName + ": " + businessNetworkDefinition.getVersion());
+        // console.log("Installed " + businessNetworkName + ": " + businessNetworkDefinition.getVersion());
         
         // Start the business network and configure an network admin identity
         const startOptions = {
@@ -91,7 +91,7 @@ describe('#' + namespace, async () => {
         
         //\debug
         const adminCards = await adminConnection.start(businessNetworkName, businessNetworkDefinition.getVersion(), startOptions);
-        console.log("Started");
+        // console.log("Started");
         
         // Import the network admin identity for us to use
         adminCardName = `${adminUserName}@${businessNetworkDefinition.getName()}`;
@@ -99,7 +99,7 @@ describe('#' + namespace, async () => {
 
         // Connect to the business network using the network admin identity
         await businessNetworkConnection.connect(adminCardName);
-        console.log("Connected");
+        // console.log("Connected");
         
 
         factory = businessNetworkConnection.getBusinessNetwork().getFactory();
@@ -118,7 +118,13 @@ describe('#' + namespace, async () => {
       it('CanVote() doesnt throw', async () => {
         let transaction = factory.newTransaction(namespace, "CanVote");
         let action = async () => await businessNetworkConnection.submitTransaction(transaction);
-        action.should.not.throw();
+        try {
+          await action();
+        } catch (e) {
+          console.log(e);
+          throw(e);
+        }
+        //action.should.not.throw();
       });
     });
 
@@ -170,7 +176,13 @@ describe('#' + namespace, async () => {
       it('shouldn\'t be able to vote again', async () => {
         let transaction = factory.newTransaction(namespace, "CanVote");
         let action = async () => await businessNetworkConnection.submitTransaction(transaction);
-        action.should.throw();
+        //action.should.throw();
+        try {
+          await action();
+          throw(new Error("Should have thrown"));
+        } catch (e) {
+          console.log(e);
+        }        
       });
     });
 
