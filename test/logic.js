@@ -13,7 +13,10 @@ const Util = require('composer-common').Util;
 
 const path = require('path');
 
-require('chai').should();
+const chai = require('chai');
+const chaiAsPromised = require("chai-as-promised");
+chai.use(chaiAsPromised);
+chai.should();
 
 const namespace = 'org.rynk';
 const assetType = 'SampleAsset';
@@ -52,14 +55,6 @@ describe('#' + namespace, async () => {
 
         await adminConnection.importCard(deployerCardName, deployerCard);
         await adminConnection.connect(deployerCardName);
-        // let definition = await BusinessNetworkDefinition.fromDirectory(__dirname + '/..');
-        // await adminConnection.update(definition);
-
-                //DEBUG
-                // var pouchdbDebug = require('pouchdb-debug');
-                // var PouchDB = require('pouchdb-core');
-                // PouchDB.plugin(pouchdbDebug);
-                // //PouchDB.debug.enable('*');
     });
 
     beforeEach(async () => {
@@ -117,14 +112,11 @@ describe('#' + namespace, async () => {
 
       it('CanVote() doesnt throw', async () => {
         let transaction = factory.newTransaction(namespace, "CanVote");
-        let action = async () => await businessNetworkConnection.submitTransaction(transaction);
-        try {
-          await action();
-        } catch (e) {
-          console.log(e);
-          throw(e);
-        }
-        //action.should.not.throw();
+        //let action = async () => await businessNetworkConnection.submitTransaction(transaction);
+        let action = new Promise((resolve, reject) => {
+            businessNetworkConnection.submitTransaction(transaction).then(resolve).catch(reject);
+        });
+        action.should.be.fulfilled;
       });
     });
 
@@ -143,18 +135,10 @@ describe('#' + namespace, async () => {
     describe('Voting for the first time', async () => {
 
       beforeEach(async () => {
-
-
         //Vote transaction
-        // console.log("Voting..");
         const voteData = factory.newTransaction(namespace, 'Vote');
         voteData.votedChoice = factory.newRelationship(namespace, 'Choice', choiceName);
         await businessNetworkConnection.submitTransaction(voteData);
-
-        // let vote = factory.newResource(namespace, 'SubmittedVote', "1");
-        // vote.submittedChoice = factory.newRelationship(namespace, 'Choice', Choice.$identifier);
-        // let voteRegistry = await businessNetworkConnection.getAssetRegistry(namespace + '.' + 'SubmittedVote');
-        // await voteRegistry.add(vote);
       });
 
       it('should be one vote in the registry for Our President', async () => {
@@ -175,14 +159,10 @@ describe('#' + namespace, async () => {
 
       it('shouldn\'t be able to vote again', async () => {
         let transaction = factory.newTransaction(namespace, "CanVote");
-        let action = async () => await businessNetworkConnection.submitTransaction(transaction);
-        //action.should.throw();
-        try {
-          await action();
-          throw(new Error("Should have thrown"));
-        } catch (e) {
-          console.log(e);
-        }        
+        let action = new Promise((resolve, reject) => {
+          businessNetworkConnection.submitTransaction(transaction).then(resolve).catch(reject);
+        });
+        action.should.not.be.fulfilled;     
       });
     });
 

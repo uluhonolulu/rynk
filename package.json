@@ -18,5 +18,8 @@
     "istanbul": "latest",
     "mkdirp": "latest",
     "mocha": "^5.2.0"
+  },
+  "dependencies": {
+    "chai-as-promised": "^7.1.1"
   }
 }
