@@ -4,6 +4,7 @@ module.exports = {
     AdminConnection: require('composer-admin').AdminConnection,
     BusinessNetworkDefinition: require('composer-common').BusinessNetworkDefinition,
     BusinessNetworkConnection: require('composer-client').BusinessNetworkConnection,
+    CertificateUtil: require('composer-common').CertificateUtil,
     debug: false,
 
     // Objects created for testing

@@ -1,0 +1,11 @@
+query GetVoteResults {
+  description: "Get vote totals"
+  statement:
+    SELECT org.rynk.VoteTotal
+}
+
+query GetChoices {
+  description: "Get available choices"
+  statement:
+    SELECT org.rynk.Choice
+}

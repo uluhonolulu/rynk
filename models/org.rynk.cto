@@ -4,12 +4,8 @@
 
 namespace org.rynk
 
+/* a person that votes */
 participant User identified by userName {
-  o String userName
-}
-
-/** to avoid double voting, we store all voters */
-asset Voter identified by userName {
   o String userName
 }
 
@@ -18,10 +14,22 @@ asset Choice identified by name {
   o String name
 }
 
+/** to avoid double voting, we store all voters */
+asset VotedUser identified by userName {
+  o String userName
+}
+
 /* all vote results -- this is what we count at the end of the vote */
 asset VotedChoice identified by id {
   o String id
-  --> Choice votedChoice optional
+  --> Choice votedChoice
+}
+
+/** vote totals */
+asset VoteTotal identified by choiceName {
+  o String choiceName
+  --> Choice votedChoice
+  o Integer count
 }
 
 /* an act of voting */
@@ -31,32 +39,6 @@ transaction Vote {
 
 /* checking whether we can vote */
 transaction CanVote {
-  o CanVoteInput input
 }
 
-event CanVoteResult {
-  o Boolean result
-}
 
-/* A dummy input concept for CanVote() */
-concept CanVoteInput {
-
-}
-
-transaction GetVoteResults {
-  o GetVoteResultsInput input
-}
-
-concept GetVoteResultsInput {
-
-}
-
-concept ChoiceAndVoteCount {
-  o String choiceName
-  o Integer count
-}
-
-event GetVoteResultsResult {
-  o ChoiceAndVoteCount[] result
-  o String error optional
-}

@@ -1,6 +1,6 @@
 {
   "name": "rynk",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "HL voting",
   "scripts": {
     "test": "mocha --recursive --timeout 20000"
@@ -9,14 +9,14 @@
   "email": "uluhonolulu2gmail.com",
   "license": "Apache-2.0",
   "devDependencies": {
-    "composer-admin": "latest",
-    "composer-client": "latest",
-    "composer-common": "latest",
-    "composer-connector-embedded": "latest",
     "chai": "latest",
-    "eslint": "latest",
+    "composer-admin": "^0.19.5",
+    "composer-client": "^0.19.5",
+    "composer-common": "^0.19.5",
+    "composer-connector-embedded": "^0.19.5",
+    "eslint": "^4.19.1",
     "istanbul": "latest",
     "mkdirp": "latest",
-    "mocha": "latest"
+    "mocha": "^5.2.0"
   }
 }

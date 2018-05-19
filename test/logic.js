@@ -8,7 +8,7 @@
 // const BusinessNetworkDefinition = require('composer-common').BusinessNetworkDefinition;
 // const IdCard = require('composer-common').IdCard;
 // const MemoryCardStore = require('composer-common').MemoryCardStore;
-const { AdminConnection, BusinessNetworkConnection, BusinessNetworkDefinition, IdCard, MemoryCardStore } = require('./setup.js');
+const { AdminConnection, BusinessNetworkConnection, BusinessNetworkDefinition, IdCard, MemoryCardStore, CertificateUtil } = require('./setup.js');
 const Util = require('composer-common').Util;
 
 const path = require('path');
@@ -23,7 +23,7 @@ const choiceName = "Dobro";
 
 describe('#' + namespace, async () => {
     // In-memory card store for testing so cards are not persisted to the file system
-    const cardStore = new MemoryCardStore();
+    const cardStore = require('composer-common').NetworkCardStoreManager.getCardStore( { type: 'composer-wallet-inmemory' } );
     let adminConnection;
     let businessNetworkConnection;
     let factory;
@@ -32,16 +32,13 @@ describe('#' + namespace, async () => {
         //console.log("Global Before");
         // Embedded connection used for local testing
         const connectionProfile = {
-            name: 'embedded',
-            type: 'embedded'
+          name: 'embedded',
+          'x-type': 'embedded'
         };
-        // Embedded connection does not need real credentials
-        const credentials = {
-            certificate: 'FAKE CERTIFICATE',
-            privateKey: 'FAKE PRIVATE KEY'
-        };
+        // Generate certificates for use with the embedded connection
+        const credentials = CertificateUtil.generate({ commonName: 'admin' });
 
-        // PeerAdmin identity used with the admin connection to deploy business networks
+        // Identity used with the admin connection to deploy business networks
         const deployerMetadata = {
             version: 1,
             userName: 'PeerAdmin',
@@ -71,11 +68,13 @@ describe('#' + namespace, async () => {
 
         const adminUserName = 'admin';
         let adminCardName;
-        let businessNetworkDefinition;
 
-        businessNetworkDefinition = await BusinessNetworkDefinition.fromDirectory(path.resolve(__dirname, '..'));
+        const businessNetworkDefinition = await BusinessNetworkDefinition.fromDirectory(path.resolve(__dirname, '..'));
+        const businessNetworkName = businessNetworkDefinition.getName();
             // Install the Composer runtime for the new business network
-        await adminConnection.install(businessNetworkDefinition.getName());
+        await adminConnection.install(businessNetworkDefinition);
+        console.log("Installed " + businessNetworkName + ": " + businessNetworkDefinition.getVersion());
+        
         // Start the business network and configure an network admin identity
         const startOptions = {
             networkAdmins: [
@@ -85,14 +84,23 @@ describe('#' + namespace, async () => {
                 }
             ]
         };
-        let adminCards = await adminConnection.start(businessNetworkDefinition, startOptions);
-
+        //debug
+        // const EmbeddedConnection = require('composer-connector-embedded').EmbeddedConnection;
+        // const chainCode = EmbeddedConnection.getInstalledChaincode(businessNetworkName, businessNetworkDefinition.getVersion());
+        // console.log(JSON.stringify(chainCode));
+        
+        //\debug
+        const adminCards = await adminConnection.start(businessNetworkName, businessNetworkDefinition.getVersion(), startOptions);
+        console.log("Started");
+        
         // Import the network admin identity for us to use
         adminCardName = `${adminUserName}@${businessNetworkDefinition.getName()}`;
         await adminConnection.importCard(adminCardName, adminCards.get(adminUserName));
 
         // Connect to the business network using the network admin identity
         await businessNetworkConnection.connect(adminCardName);
+        console.log("Connected");
+        
 
         factory = businessNetworkConnection.getBusinessNetwork().getFactory();
 
@@ -107,47 +115,13 @@ describe('#' + namespace, async () => {
         votes.length.should.equal(0);
       });
 
-      it('CanVote() returns true', async () => {
+      it('CanVote() doesnt throw', async () => {
         let transaction = factory.newTransaction(namespace, "CanVote");
-        let dummy = factory.newConcept(namespace, "CanVoteInput");
-        transaction.input = dummy;
-
-        let result = await getTransactionResult(transaction, "org.rynk.CanVoteResult");
-        result.should.be.true;
-      });
-
-      describe ('If there is a Choice', async () => {
-        // before(async () => {
-        // });
-
-        it('it is present in vote results, and the vote count is 0', async () => {
-          let voteResults = await getVoteResults();
-          voteResults.length.should.equal(1);
-          let vote = voteResults[0];
-          vote.choiceName.should.equal(choiceName);
-          vote.count.should.equal(0);
-        });
+        let action = async () => await businessNetworkConnection.submitTransaction(transaction);
+        action.should.not.throw();
       });
     });
 
-    async function getTransactionResult(transaction, expectedEvent){
-      return new Promise(async (resolve, reject) => {
-        businessNetworkConnection.on('event',(event)=>{
-          var eventType = event.$namespace + '.' + event.$type;
-          console.log(eventType);
-          if (eventType === expectedEvent) {
-            if (event.error) {
-              reject(event.error);
-            } else {
-              resolve(event.result);
-            }
-
-          }
-        });
-
-        await businessNetworkConnection.submitTransaction(transaction);
-      });
-    }
 
     async function createChoice() {
         let choice = factory.newResource(namespace, 'Choice', choiceName);
@@ -159,13 +133,6 @@ describe('#' + namespace, async () => {
         // console.log(choices.length);
     }
 
-    async function getVoteResults() {
-      let transaction = factory.newTransaction(namespace, 'GetVoteResults');
-      let dummy = factory.newConcept(namespace, "CanVoteInput");
-      transaction.input = dummy;
-      let result = await getTransactionResult(transaction, "org.rynk.GetVoteResultsResult");
-      return result;
-    }
 
     describe('Voting for the first time', async () => {
 
@@ -193,7 +160,8 @@ describe('#' + namespace, async () => {
       });
 
       it('should be one vote in the Vote Results for Our President', async () => {
-        let voteResults = await getVoteResults();
+        let voteResults = await businessNetworkConnection.query('GetVoteResults');
+        voteResults.length.should.equal(1);
         let vote = voteResults[0];
         vote.choiceName.should.equal(choiceName);
         vote.count.should.equal(1);
@@ -201,11 +169,8 @@ describe('#' + namespace, async () => {
 
       it('shouldn\'t be able to vote again', async () => {
         let transaction = factory.newTransaction(namespace, "CanVote");
-        let dummy = factory.newConcept(namespace, "CanVoteInput");
-        transaction.input = dummy;
-
-        let result = await getTransactionResult(transaction, "org.rynk.CanVoteResult");
-        result.should.be.false;
+        let action = async () => await businessNetworkConnection.submitTransaction(transaction);
+        action.should.throw();
       });
     });
 
