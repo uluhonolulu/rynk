@@ -96,7 +96,7 @@ describe('#' + namespace, async () => {
         await createChoice();
     });
 
-    xdescribe('Initially', async () => {
+    describe('Initially', async () => {
       it('should be zero votes', async () => {
         let voteRegistry = await businessNetworkConnection.getAssetRegistry(namespace + '.' + 'VotedChoice');
         let votes = await voteRegistry.getAll();
@@ -170,5 +170,29 @@ describe('#' + namespace, async () => {
       });
     });
 
+    describe('If there is one vote and we vote again', () => {
+      beforeEach(async () => {
+        //Initial vote
+        let voteTotal = factory.newResource(namespace, 'VoteTotal', choiceName);
+        voteTotal.votedChoice = factory.newRelationship(namespace, 'Choice', choiceName);
+        voteTotal.count = 1;
+        let voteRegistry = await businessNetworkConnection.getAssetRegistry(namespace + '.' + 'VoteTotal');
+        await voteRegistry.add(voteTotal);
 
+        //Vote transaction
+        const voteData = factory.newTransaction(namespace, 'Vote');
+        voteData.votedChoice = factory.newRelationship(namespace, 'Choice', choiceName);
+        voteData.uuid = uuidv1();
+        await businessNetworkConnection.submitTransaction(voteData);
+      });
+
+      it('Vote Results should show 2 votes', async () => {
+        let voteResults = await businessNetworkConnection.query('GetVoteResults');
+        voteResults.length.should.equal(1);
+        let vote = voteResults[0];
+        vote.choiceName.should.equal(choiceName);
+        vote.count.should.equal(2);
+        
+      });
+    });
 });
