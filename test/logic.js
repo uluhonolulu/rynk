@@ -12,10 +12,10 @@ chai.use(chaiAsPromised);
 chai.should();
 
 const namespace = 'org.rynk';
-const assetType = 'SampleAsset';
 
 const choiceName = "Dobro";
-
+const userName = "joe";
+const user2Name = "gil";
 
 describe('#' + namespace, async () => {
     // In-memory card store for testing so cards are not persisted to the file system
@@ -122,6 +122,8 @@ describe('#' + namespace, async () => {
         // console.log("Counting choices");
         // let choices = await registry.getAll();
         // console.log(choices.length);
+        // console.log(await registry.exists(choiceName));
+        
     }
 
 
@@ -149,6 +151,12 @@ describe('#' + namespace, async () => {
         let vote = voteResults[0];
         vote.choiceName.should.equal(choiceName);
         vote.count.should.equal(1);
+      });
+
+      it('Can read my vote', async () => {
+        let registry = await businessNetworkConnection.getAssetRegistry(namespace + '.' + 'VotedUser');
+        let myVoteExists = await registry.exists("admin");
+        myVoteExists.should.be.true;
       });
 
       it('shouldn\'t be able to vote again', async () => {
@@ -195,4 +203,54 @@ describe('#' + namespace, async () => {
         
       });
     });
+
+    describe('If there\'s some other\'s vote', async () => {
+      
+      beforeEach( async () => {
+        let votedUser = factory.newResource(namespace, 'VotedUser', userName);
+        const userConnection = await getUserConnection(userName);
+        let registry = await userConnection.getAssetRegistry(namespace + '.' + 'VotedUser');
+        await registry.add(votedUser);
+      });
+
+      it('We should not be able to read it', async () => {
+        const userConnection = await getUserConnection(user2Name);
+        let registry = await userConnection.getAssetRegistry(namespace + '.' + 'VotedUser');
+        
+        let myVoteExists = await registry.exists(userName);
+        myVoteExists.should.be.false;
+      });
+    });
+
+    //we need to create a user identity and participant to simulate voting by a user
+    async function getUserConnection(userName) {
+      let participantRegistry = await businessNetworkConnection.getParticipantRegistry('org.rynk.User');
+      let exists = await participantRegistry.exists(userName);
+      if (!exists) {
+        let participant = factory.newResource('org.rynk', "User", userName);
+        await participantRegistry.add(participant);
+
+        let identity = await businessNetworkConnection.issueIdentity('org.rynk.User' + '#' + userName, userName);
+        let metadata= {
+          userName,
+          version : 1,
+          enrollmentSecret: identity.userSecret,
+          businessNetwork : "rynk"
+        };
+        const connectionProfile = {
+          name: 'embedded',
+          'x-type': 'embedded'
+        };
+        let newCard = new IdCard(metadata, connectionProfile);
+
+        const cardName = userName + '@rynk';
+        await cardStore.put(cardName, newCard);            
+      }
+  
+
+      const userConnection  = new BusinessNetworkConnection({ cardStore });
+      await userConnection.connect(userName + '@rynk');
+
+      return userConnection;
+    }
 });

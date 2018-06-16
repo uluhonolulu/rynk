@@ -1,0 +1,58 @@
+rule ICannotAccessOtherVotes {
+    description: "Disallow reading others' votes"
+    participant(p): "org.rynk.User"
+    operation: ALL
+    resource(r): "org.rynk.VotedUser"
+    condition: (r.userName !== p.userName)
+    action: DENY
+}
+
+rule ICanAccessMyVote {
+    description: "Disallow reading others' votes"
+    participant(p): "org.rynk.User"
+    operation: ALL
+    resource(r): "org.rynk.VotedUser"
+    condition: (r.userName === p.userName)
+    action: ALLOW
+}
+
+rule AdminCannotReadOtherVotes {
+    description: "Disallow reading others' votes for admin"
+    participant: "org.hyperledger.composer.system.NetworkAdmin#admin"
+    operation: ALL
+    resource(r): "org.rynk.VotedUser"
+    condition: (r.userName != "admin")
+    action: DENY
+}
+
+rule EverybodyCanReadEverything {
+    description: "Allow all participants read access to all resources"
+    participant: "org.rynk.*"
+    operation: READ
+    resource: "org.rynk.*"
+    action: ALLOW
+}
+
+rule SystemACL {
+  description:  "System ACL to permit all access"
+  participant: "org.hyperledger.composer.system.Participant"
+  operation: ALL
+  resource: "org.hyperledger.composer.system.**"
+  action: ALLOW
+}
+
+rule NetworkAdminUser {
+    description: "Grant business network administrators full access to user resources"
+    participant: "org.hyperledger.composer.system.NetworkAdmin#admin"
+    operation: ALL
+    resource: "**"
+    action: ALLOW
+}
+
+rule NetworkAdminSystem {
+    description: "Grant business network administrators full access to system resources"
+    participant: "org.hyperledger.composer.system.NetworkAdmin#admin"
+    operation: ALL
+    resource: "org.hyperledger.composer.system.**"
+    action: ALLOW
+}

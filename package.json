@@ -1,12 +1,12 @@
 {
   "name": "rynk",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "HL voting",
   "scripts": {
     "test": "mocha --recursive --timeout 20000"
   },
   "author": "Artem Smirnov",
-  "email": "uluhonolulu2gmail.com",
+  "email": "uluhonolulu@gmail.com",
   "license": "Apache-2.0",
   "devDependencies": {
     "chai": "latest",
