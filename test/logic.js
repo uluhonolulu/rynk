@@ -137,7 +137,7 @@ describe('#' + namespace, async () => {
         await voteFor(userName, choiceName);
       });
 
-      it('should be one vote in the Vote Results for Our President', async () => {
+      it('should be one vote in the Vote Results', async () => {
         let voteResults = await this.connection.query('GetVoteResults');
         voteResults.length.should.equal(1);
         let vote = voteResults[0];
@@ -178,15 +178,12 @@ describe('#' + namespace, async () => {
     describe('If there\'s some other\'s vote', async () => {
       
       beforeEach( async () => {
-        let votedUser = factory.newResource(namespace, 'VotedUser', userName);
-        const userConnection = await getUserConnection(userName);
-        let registry = await userConnection.getAssetRegistry(namespace + '.' + 'VotedUser');
-        await registry.add(votedUser);
+        voteFor(userName, choiceName);
       });
 
       it('We should not be able to read it', async () => {
         const userConnection = await getUserConnection(user2Name);
-        let registry = await userConnection.getAssetRegistry(namespace + '.' + 'VotedUser');
+        let registry = await userConnection.getAssetRegistry(namespace + '.' + 'Ballot');
         
         let myVoteExists = await registry.exists(userName);
         myVoteExists.should.be.false;

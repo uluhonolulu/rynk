@@ -2,16 +2,16 @@ rule ICannotAccessOtherVotes {
     description: "Disallow reading others' votes"
     participant(p): "org.rynk.User"
     operation: ALL
-    resource(r): "org.rynk.VotedUser"
+    resource(r): "org.rynk.Ballot"
     condition: (r.userName !== p.userName)
     action: DENY
 }
 
 rule ICanAccessMyVote {
-    description: "Disallow reading others' votes"
+    description: "Allow reading my vote"
     participant(p): "org.rynk.User"
     operation: ALL
-    resource(r): "org.rynk.VotedUser"
+    resource(r): "org.rynk.Ballot"
     condition: (r.userName === p.userName)
     action: ALLOW
 }
@@ -29,7 +29,7 @@ rule AdminCannotReadOtherVotes {
     description: "Disallow reading others' votes for admin"
     participant: "org.hyperledger.composer.system.NetworkAdmin#admin"
     operation: ALL
-    resource(r): "org.rynk.VotedUser"
+    resource(r): "org.rynk.Ballot"
     condition: (r.userName != "admin")
     action: DENY
 }
