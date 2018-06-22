@@ -16,6 +16,15 @@ rule ICanAccessMyVote {
     action: ALLOW
 }
 
+rule ICanCreateVoteTransaction {
+  description: "Allow users to execute Vote transactions"
+  participant: "org.rynk.User"
+  operation: ALL
+  resource: "org.rynk.*"
+  transaction: "org.rynk.Vote"
+  action: ALLOW
+}
+
 rule AdminCannotReadOtherVotes {
     description: "Disallow reading others' votes for admin"
     participant: "org.hyperledger.composer.system.NetworkAdmin#admin"

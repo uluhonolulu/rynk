@@ -3,7 +3,7 @@
   "version": "0.0.4",
   "description": "HL voting",
   "scripts": {
-    "test": "mocha --recursive --timeout 20000"
+    "test": "nodemon --exec \"mocha --recursive --timeout 20000\""
   },
   "author": "Artem Smirnov",
   "email": "uluhonolulu@gmail.com",

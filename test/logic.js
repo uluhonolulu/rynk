@@ -9,11 +9,12 @@ const uuidv1 = require('uuid/v1');
 const chai = require('chai');
 const chaiAsPromised = require("chai-as-promised");
 chai.use(chaiAsPromised);
-chai.should();
+const should = chai.should();
 
 const namespace = 'org.rynk';
 
 const choiceName = "Dobro";
+const choice2Name = "Zlo";
 const userName = "joe";
 const user2Name = "gil";
 
@@ -90,32 +91,33 @@ describe('#' + namespace, async () => {
         // console.log("Connected");
         
 
-        factory = businessNetworkConnection.getBusinessNetwork().getFactory();
+        factory = businessNetworkDefinition.getFactory();
 
-        //create a Choice
-        await createChoice();
+        //create two Choices
+        await createChoice(choiceName);
+        await createChoice(choice2Name);
     });
 
     describe('Initially', async () => {
       it('should be zero votes', async () => {
-        let voteRegistry = await businessNetworkConnection.getAssetRegistry(namespace + '.' + 'VotedChoice');
+        let voteRegistry = await businessNetworkConnection.getAssetRegistry(namespace + '.' + 'VoteTotal');
         let votes = await voteRegistry.getAll();
         votes.length.should.equal(0);
       });
 
-      it('CanVote() doesnt throw', async () => {
-        let transaction = factory.newTransaction(namespace, "CanVote");
-        //let action = async () => await businessNetworkConnection.submitTransaction(transaction);
-        let action = new Promise((resolve, reject) => {
-            businessNetworkConnection.submitTransaction(transaction).then(resolve).catch(reject);
-        });
-        return action.should.be.fulfilled;
+      it('Vote doesn\'t exist', async () => {
+        const connection = await getUserConnection(userName);
+        let registry = await connection.getAssetRegistry(namespace + '.' + 'Ballot');
+        let ballotExists = await registry.exists(userName);
+        ballotExists.should.be.false;
+
       });
     });
 
 
-    async function createChoice() {
+    async function createChoice(choiceName) {
         let choice = factory.newResource(namespace, 'Choice', choiceName);
+        choice.URL = "url";
         let registry = await businessNetworkConnection.getAssetRegistry(namespace + '.' + 'Choice');
         await registry.add(choice);
 
@@ -129,24 +131,14 @@ describe('#' + namespace, async () => {
 
     describe('Voting for the first time', async () => {
 
-      beforeEach(async () => {
+      before(async () => {
         //Vote transaction
-        const voteData = factory.newTransaction(namespace, 'Vote');
-        voteData.votedChoice = factory.newRelationship(namespace, 'Choice', choiceName);
-        voteData.uuid = uuidv1();
-        await businessNetworkConnection.submitTransaction(voteData);
-      });
-
-      it('should be one vote in the registry for Our President', async () => {
-        // console.log("Counting..");
-        let voteRegistry = await businessNetworkConnection.getAssetRegistry(namespace + '.' + 'VotedChoice');
-        let votes = await voteRegistry.getAll();
-        votes.length.should.equal(1);
-        votes[0].votedChoice.$identifier.should.equal(choiceName);
+        this.connection = await getUserConnection(userName);
+        await voteFor(userName, choiceName);
       });
 
       it('should be one vote in the Vote Results for Our President', async () => {
-        let voteResults = await businessNetworkConnection.query('GetVoteResults');
+        let voteResults = await this.connection.query('GetVoteResults');
         voteResults.length.should.equal(1);
         let vote = voteResults[0];
         vote.choiceName.should.equal(choiceName);
@@ -154,44 +146,23 @@ describe('#' + namespace, async () => {
       });
 
       it('Can read my vote', async () => {
-        let registry = await businessNetworkConnection.getAssetRegistry(namespace + '.' + 'VotedUser');
-        let myVoteExists = await registry.exists("admin");
-        myVoteExists.should.be.true;
+        let registry = await this.connection.getAssetRegistry(namespace + '.' + 'Ballot');
+        let ballotExists = await registry.exists(userName);
+        ballotExists.should.be.true;
+
+        let ballot = await registry.get(userName);
+        ballot.votedChoice.$identifier.toString().should.equal(choiceName);
       });
 
-      it('shouldn\'t be able to vote again', async () => {
-        let canVoteTransaction = factory.newTransaction(namespace, "CanVote");
-        
-        //Vote should throw, too
-        let voteTransaction = factory.newTransaction(namespace, 'Vote');
-        voteTransaction.votedChoice = factory.newRelationship(namespace, 'Choice', choiceName);
-        voteTransaction.uuid = uuidv1();
-
-        return Promise.all([
-          new Promise((resolve, reject) => {
-            businessNetworkConnection.submitTransaction(canVoteTransaction).then(resolve).catch(reject);
-          }).should.not.be.fulfilled,
-          new Promise((resolve, reject) => {
-            businessNetworkConnection.submitTransaction(voteTransaction).then(resolve).catch(reject);
-          }).should.not.be.fulfilled
-        ]);           
-      });
     });
 
     describe('If there is one vote and we vote again', () => {
       beforeEach(async () => {
         //Initial vote
-        let voteTotal = factory.newResource(namespace, 'VoteTotal', choiceName);
-        voteTotal.votedChoice = factory.newRelationship(namespace, 'Choice', choiceName);
-        voteTotal.count = 1;
-        let voteRegistry = await businessNetworkConnection.getAssetRegistry(namespace + '.' + 'VoteTotal');
-        await voteRegistry.add(voteTotal);
+        await voteFor(user2Name, choiceName);
 
-        //Vote transaction
-        const voteData = factory.newTransaction(namespace, 'Vote');
-        voteData.votedChoice = factory.newRelationship(namespace, 'Choice', choiceName);
-        voteData.uuid = uuidv1();
-        await businessNetworkConnection.submitTransaction(voteData);
+        //my vote
+        await voteFor(userName, choiceName);
       });
 
       it('Vote Results should show 2 votes', async () => {
@@ -219,6 +190,32 @@ describe('#' + namespace, async () => {
         
         let myVoteExists = await registry.exists(userName);
         myVoteExists.should.be.false;
+      });
+    });
+
+    describe('If I voted and then voted differently', () => {
+      beforeEach(async () => {
+        //Initial vote
+        await voteFor(userName, choiceName);
+
+        //Different vote
+        await voteFor(userName, choice2Name);
+      });
+
+      it('I should be able to see my last choice', async () => {
+        var myVote = await getMyVote(userName);
+        should.exist(myVote);
+        myVote.choiceName.should.be.equal(choice2Name);
+      });
+
+      it('Should be one vote for my last choice', async () => {
+        let count = await votesFor(choice2Name);
+        count.should.be.equal(1);
+      });
+
+      it('Should be zero votes for my first choice', async () => {
+        let count = await votesFor(choiceName);
+        count.should.be.equal(0);        
       });
     });
 
@@ -252,5 +249,36 @@ describe('#' + namespace, async () => {
       await userConnection.connect(userName + '@rynk');
 
       return userConnection;
+    }
+
+    async function voteFor(userName, choiceName){
+      const voteData = factory.newTransaction(namespace, 'Vote');
+      voteData.votedChoice = factory.newRelationship(namespace, 'Choice', choiceName);
+      voteData.uuid = uuidv1();
+      voteData.when = new Date();
+      const connection = await getUserConnection(userName);
+      await connection.submitTransaction(voteData);      
+    }
+
+    async function getMyVote(userName) {
+      let connection = await getUserConnection(userName);
+      let registry = await connection.getAssetRegistry(namespace + '.' + 'Ballot');
+      var exists = await registry.exists(userName);
+      if (!exists) {
+        return null;
+      }
+      let ballot = await registry.get(userName);
+      ballot.choiceName = ballot.votedChoice.$identifier;
+      return ballot;
+    }
+
+    async function votesFor(choiceName) {
+      let registry = await businessNetworkConnection.getAssetRegistry(namespace + '.' + 'VoteTotal');
+      let exists = await registry.exists(choiceName);
+      if (!exists) {
+        return 0;
+      }
+      let total = await registry.get(choiceName);
+      return total.count;
     }
 });

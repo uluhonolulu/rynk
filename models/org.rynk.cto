@@ -4,6 +4,7 @@
 
 namespace org.rynk
 
+/******************* SETUP ****************************/
 /* a person that votes */
 participant User identified by userName {
   o String userName
@@ -12,14 +13,24 @@ participant User identified by userName {
 /* all items to be voted for, like, names of presidential candidates */
 asset Choice identified by name {
   o String name
+  o String URL optional
 }
 
-/** to avoid double voting, we store all voters */
+
+/******************* RUNTIME ****************************/
+asset Ballot identified by userName {
+  o String userName
+  --> User user
+  --> Choice votedChoice
+  o DateTime when
+}
+
+/** DEPRECATED to avoid double voting, we store all voters */
 asset VotedUser identified by userName {
   o String userName
 }
 
-/* all vote results -- this is what we count at the end of the vote */
+/* DEPRECATED all vote results -- this is what we count at the end of the vote */
 asset VotedChoice identified by id {
   o String id
   --> Choice votedChoice
@@ -36,10 +47,9 @@ asset VoteTotal identified by choiceName {
 transaction Vote {
   o String uuid
   --> Choice votedChoice
+  o DateTime when
 }
 
-/* checking whether we can vote */
-transaction CanVote {
-}
+
 
 
