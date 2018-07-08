@@ -1,6 +1,6 @@
 {
   "name": "rynk",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "description": "HL voting",
   "scripts": {
     "test": "nodemon --exec \"mocha --recursive --timeout 20000\""

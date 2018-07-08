@@ -216,6 +216,21 @@ describe('#' + namespace, async () => {
       });
     });
 
+    describe('If I voted and then voted the same', () => {
+      beforeEach(async () => {
+        //Initial vote
+        await voteFor(userName, choiceName);
+
+        //Different vote
+        await voteFor(userName, choiceName);
+      });
+
+      it('Should be one vote for my choice', async () => {
+        let count = await votesFor(choiceName);
+        count.should.be.equal(1);          
+      });
+    });
+
     //we need to create a user identity and participant to simulate voting by a user
     async function getUserConnection(userName) {
       let participantRegistry = await businessNetworkConnection.getParticipantRegistry('org.rynk.User');
